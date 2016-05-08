@@ -24,7 +24,8 @@ public class WorkerUpdateThread implements Runnable {
 			Socket s = new Socket(this.worker.masterIP, this.worker.masterPort);
 			String body = "workerID=" + this.worker.workerID + "&"
 					+ "workerPort=" + this.worker.workerPort + "&"
-					+ "status=" + this.worker.status;
+					+ "status=" + this.worker.status + "&"
+					+ "numDocs=" + this.worker.numDocs;
 			sendPost(s, "/workerupdate", body);
 			s.close();
 		} catch (UnknownHostException e) {

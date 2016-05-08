@@ -46,9 +46,14 @@ public class PageRank {
 	private String s3CorpusDirKey = "test_docs/";
 	private String s3SpoolTempDirKey = "pagerank/storage/spoolTemp/";
 	private String s3OutputDirKey = "pagerank/storage/output/";
-	
+
 	// Constructor
-	public PageRank(String root, int numWorkers, List<String> workerList) {
+	public PageRank(String root, int numWorkers, List<String> workerList, int workerID) {
+
+		// Workers
+		this.numWorkers = numWorkers;
+		this.workerList = workerList;
+		this.workerID = workerID;
 
 		// Declare the directories
 		this.inputDir = new File(root, "Input");
@@ -58,30 +63,30 @@ public class PageRank {
 		this.corpusZipped = new File(root, "CorpusZipped");
 		this.corpusUnzipped = new File(root, "CorpusUnzipped");
 
-		// Declare the files
-		this.inputFile = new File(this.inputDir, "Input");
-		this.outputFile = new File(this.outputDir, "Output");
-
 		// Make the directories
 		FileHelper.makeDirDeleteIfExists(this.spoolIn);
 		FileHelper.makeDirDeleteIfExists(this.spoolOut);
+		FileHelper.makeDirDeleteIfExists(this.outputDir);
 
-		// Workers
-		this.numWorkers = numWorkers;
-		this.workerList = workerList;
+		// Declare the files
+		this.inputFile = new File(this.inputDir, "Input");
+		this.outputFile = new File(this.outputDir, "worker-" + workerID);
 
 		// Jobs and Contexts
-		this.prj = new PageRankJob();
+		this.prj = new PageRankJob(0);
 		this.prmc = new PageRankMapContext(this.workerID, this.spoolIn, this.numWorkers, this.workerList);
 		this.prrc = new PageRankReduceContext(this.outputDir, this.workerID);
 
 	}
 
 	// Retrieves the corpus from S3, unzips them, then convert documents to input file
-	public void runCorpusTasks(String s3Files) {
+	public int runCorpusTasks(String s3Files) {
 		if (s3Files == null || s3Files.isEmpty()) {
-			return;
+			return 0;
 		}
+		
+		int numDocs = 0;
+		
 		// Create the directories, delete if they exists already
 		FileHelper.makeDirDeleteIfExists(this.corpusZipped);
 		FileHelper.makeDirDeleteIfExists(this.corpusUnzipped);
@@ -169,13 +174,14 @@ public class PageRank {
 						PrintWriter writer = new PrintWriter(new FileWriter(this.inputFile, true));
 						writer.println(url + ":1.0" + "\t" + links);
 						writer.close();
-
+						numDocs++;
 					} catch (FileNotFoundException e) {
 					} catch (IOException e) {
 					}
 				}
 			}
 		}
+		return numDocs;
 	}
 
 	// Map
@@ -206,7 +212,7 @@ public class PageRank {
 	// Shuffle and sort
 	public void runShuffleSort() {
 		S3Wrapper s3 = new S3Wrapper();
-		
+
 		// Delete the spool temp dir on S3 to prevent merge issues
 		s3.delete(s3SpoolTempDirKey);
 
@@ -237,7 +243,9 @@ public class PageRank {
 	}
 
 	// Reduce
-	public void runReduce() {
+	public void runReduce(int totalDocs) {
+		prj = new PageRankJob(totalDocs);
+		
 		FileHelper.makeFile(this.outputFile);
 		File spoolOutFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
 
@@ -274,7 +282,7 @@ public class PageRank {
 			for (String key : reduceMap.keySet()) {
 				this.prj.reduce(key, reduceMap.get(key).toArray(new String[reduceMap.size()]), this.prrc);
 			}
-			
+
 			// Delete the output dir on S3 to prevent merge issues
 			S3Wrapper s3 = new S3Wrapper();
 			s3.delete(s3OutputDirKey);

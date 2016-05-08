@@ -7,8 +7,13 @@ import edu.upenn.cis455.mapreduce.Context;
 import edu.upenn.cis455.mapreduce.Job;
 
 public class PageRankJob implements Job {
-
-	double alpha = 0.85;
+	
+	double n = 0;
+	double d = 0.85;
+	
+	public PageRankJob(int n) {
+		this.n = n;
+	}
 
 	// INPUT = key : [page URL:rank], value : comma separated list of out links
 	@Override
@@ -36,7 +41,7 @@ public class PageRankJob implements Job {
 				}
 			}
 		}
-		rankK = (1-this.alpha) + rankK * this.alpha;
+		rankK = (1-this.d)/this.n + rankK * this.d;
 		context.write(key + ":" + rankK, links);
 
 	}

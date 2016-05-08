@@ -28,6 +28,8 @@ public class WorkerServlet extends HttpServlet {
 	// Worker attributes
 	int workerID;
 	String status;
+	int numDocs;
+	int totalDocs;
 
 	// Update Thread
 	ScheduledExecutorService executor;
@@ -44,6 +46,8 @@ public class WorkerServlet extends HttpServlet {
 		String[] parsedMaster = master.split(":", 2);
 		this.masterIP = parsedMaster[0];
 		this.masterPort = Integer.parseInt(parsedMaster[1]);
+		this.numDocs = 0;
+		this.totalDocs = 0;
 
 		// Set initial status
 		this.status = "Idle";
@@ -91,7 +95,7 @@ public class WorkerServlet extends HttpServlet {
 			this.workerID = Integer.parseInt(req.getParameter("workerID"));
 			String workerListString = req.getParameter("workerListString");
 			List<String> workerList = makeWorkerList(workerListString);
-			this.pagerank = new PageRank(this.rootDir, numWorkers, workerList);
+			this.pagerank = new PageRank(this.rootDir, numWorkers, workerList, workerID);
 			
 			// Update worker address
 			this.workerIP = req.getLocalAddr();
@@ -104,7 +108,7 @@ public class WorkerServlet extends HttpServlet {
 			String s3Files = req.getParameter("files");
 			this.status = "Running Corpus Tasks";
 			this.wut.update();
-			this.pagerank.runCorpusTasks(s3Files);
+			this.numDocs = this.pagerank.runCorpusTasks(s3Files);
 			this.status = "Ready to Map";
 			break;
 		}
@@ -125,7 +129,8 @@ public class WorkerServlet extends HttpServlet {
 		case ("/runReduce") : {
 			this.status = "Reducing";
 			this.wut.update();
-			this.pagerank.runReduce();
+			this.totalDocs = Integer.parseInt(req.getParameter("numDocs"));
+			this.pagerank.runReduce(totalDocs);
 			this.status = "Reduce Complete";
 			break;
 		}

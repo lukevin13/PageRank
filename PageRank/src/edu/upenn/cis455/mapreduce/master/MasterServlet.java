@@ -27,6 +27,7 @@ public class MasterServlet extends HttpServlet {
 	// Servlet Parameters
 	String rootDir;
 	private List<WorkerStatus> workerList = new ArrayList<WorkerStatus>();
+	private int numDocs;
 
 	// Database and S3
 	private String s3CorpusDirKey = "test_docs/";
@@ -75,12 +76,11 @@ public class MasterServlet extends HttpServlet {
 		}
 		case ("/relay") : {
 			try {
-				String wsList = "<-->\r\n";
-				for (WorkerStatus ws : this.workerList) {
-					wsList += ws.getStatus() + "\r\n";
-				}
 				PrintWriter writer = res.getWriter();
-				writer.println(wsList);
+				writer.println("<-->\r\n");
+				for (WorkerStatus ws : this.workerList) {
+					writer.println(ws.getStatus());
+				}
 				writer.flush();
 				writer.close();
 			} catch (IOException e) {
@@ -162,7 +162,7 @@ public class MasterServlet extends HttpServlet {
 		}
 		case ("/runReduce") : {
 			for (WorkerStatus ws: this.workerList) {
-				Helper.sendPost(ws.getIP(), ws.getPort(), "/runReduce", "");
+				Helper.sendPost(ws.getIP(), ws.getPort(), "/runReduce", "numDocs=" + numDocs);
 			}
 			try {
 				res.sendRedirect("/status");
@@ -199,7 +199,7 @@ public class MasterServlet extends HttpServlet {
 							String page = parsed2[0];
 							String rank = parsed2[1];
 							bdb.putKeyValue("docID:pagerank", page, rank);
-							System.out.println("PUT: " + page + " : " + rank);
+//							System.out.println("PUT: " + page + " : " + rank);
 						}
 					}
 					reader.close();
@@ -216,6 +216,10 @@ public class MasterServlet extends HttpServlet {
 					String s3Key = this.s3DatabaseDirKey + localfile.getName();
 					s3.upload(s3Key, localfile);
 				}
+			}
+			try {
+				res.sendRedirect("/status");
+			} catch (IOException e) {
 			}
 			break;
 		}
@@ -239,20 +243,26 @@ public class MasterServlet extends HttpServlet {
 			case ("/workerupdate") : {
 				int workerID = Integer.parseInt(req.getParameter("workerID"));
 				int workerPort = Integer.parseInt(req.getParameter("workerPort"));
+				int numDoc = Integer.parseInt(req.getParameter("numDocs"));
 				String workerHost = req.getRemoteAddr();
 				String job = req.getParameter("job");
 				String status = req.getParameter("status");
 
-				WorkerStatus w = new WorkerStatus(workerID, workerPort, workerHost, job, status);
+				WorkerStatus w = new WorkerStatus(workerID, workerPort, workerHost, job, status, numDoc);
 				if (this.workerList.contains(w)) {
 					for (WorkerStatus ws : this.workerList) {
 						if (ws.equals(w)) {
 							ws.setWorkerID(workerID);
 							ws.setStatus(status);
+							ws.setNumDoc(numDoc);
 						}
 					}
 				} else {
 					this.workerList.add(w);
+				}
+				numDocs = 0;
+				for (WorkerStatus ws : workerList) {
+					numDocs += ws.getNumDoc();
 				}
 				res.sendRedirect("/status");
 				break;

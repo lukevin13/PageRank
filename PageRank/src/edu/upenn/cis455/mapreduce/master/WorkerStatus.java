@@ -7,13 +7,15 @@ public class WorkerStatus {
 	private String ip;
 	private String job;
 	private String status;
+	private int numDoc;
 	
-	public WorkerStatus(int workerID, int port, String ip, String job, String status) {
+	public WorkerStatus(int workerID, int port, String ip, String job, String status, int numDoc) {
 		this.workerID = workerID;
 		this.port = port;
 		this.ip = ip;
 		this.job = job;
 		this.status = status;
+		this.numDoc = numDoc;
 	}
 	
 	public boolean isStatus(String status) {
@@ -55,6 +57,10 @@ public class WorkerStatus {
 		return this.status;
 	}
 
+	public int getNumDoc() {
+		return this.numDoc;
+	}
+
 	public void setWorkerID(int workerID) {
 		this.workerID = workerID;
 	}
@@ -73,6 +79,10 @@ public class WorkerStatus {
 
 	public void setStatus(String status) {
 		this.status = status;
+	}
+	
+	public void setNumDoc(int numDoc) {
+		this.numDoc = numDoc;
 	}
 	
 }
