@@ -147,7 +147,7 @@ public class BDBWrapper {
 	}
 
 	// Searches existing databases for a specified database
-	private Database findDatabase(String dbName) {
+	public Database findDatabase(String dbName) {
 
 		// Search through existing databases for the specified database
 		for (Database db: this.databases) {

@@ -46,7 +46,7 @@ public class PageRank {
 	private String s3CorpusDirKey = "test_docs/";
 	private String s3SpoolTempDirKey = "pagerank/storage/spoolTemp/";
 	private String s3OutputDirKey = "pagerank/storage/output/";
-
+	
 	// Constructor
 	public PageRank(String root, int numWorkers, List<String> workerList) {
 
@@ -74,6 +74,7 @@ public class PageRank {
 		this.prj = new PageRankJob();
 		this.prmc = new PageRankMapContext(this.workerID, this.spoolIn, this.numWorkers, this.workerList);
 		this.prrc = new PageRankReduceContext(this.outputDir, this.workerID);
+
 	}
 
 	// Retrieves the corpus from S3, unzips them, then convert documents to input file
@@ -205,6 +206,9 @@ public class PageRank {
 	// Shuffle and sort
 	public void runShuffleSort() {
 		S3Wrapper s3 = new S3Wrapper();
+		
+		// Delete the spool temp dir on S3 to prevent merge issues
+		s3.delete(s3SpoolTempDirKey);
 
 		// Upload the spool in directory and its files to S3
 		for (File localFileDir : this.spoolIn.listFiles()) {
@@ -270,9 +274,12 @@ public class PageRank {
 			for (String key : reduceMap.keySet()) {
 				this.prj.reduce(key, reduceMap.get(key).toArray(new String[reduceMap.size()]), this.prrc);
 			}
+			
+			// Delete the output dir on S3 to prevent merge issues
+			S3Wrapper s3 = new S3Wrapper();
+			s3.delete(s3OutputDirKey);
 
 			// Upload each of the output files of the workers onto s3
-			S3Wrapper s3 = new S3Wrapper();
 			for (File file : this.outputDir.listFiles()) {
 				if (file.isFile()) {
 					String uploadKey = this.s3OutputDirKey + "worker-" + this.workerID;

@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+
+import edu.upenn.cis455.mapreduce.worker.S3Wrapper;
 
 public class MasterServlet extends HttpServlet {
 
@@ -40,7 +43,6 @@ public class MasterServlet extends HttpServlet {
 		this.localDatabase = new File(this.rootDir, "database");
 		this.outputDir = new File(this.rootDir, "output");
 		FileHelper.makeDirDeleteIfExists(this.localDatabase);
-		FileHelper.makeDirDeleteIfExists(this.outputDir);
 
 		S3Wrapper s3 = new S3Wrapper();
 		for (String s3FileKey : s3.getFileList(this.s3DatabaseDirKey)) {
@@ -102,7 +104,7 @@ public class MasterServlet extends HttpServlet {
 						+ "workerListString=" + workerListString;
 				Helper.sendPost(this.workerList.get(i).getIP(), this.workerList.get(i).getPort(), "/initialize", body);
 			}
-			
+
 			try {
 				res.sendRedirect("/status");
 			} catch (IOException e) {
@@ -120,7 +122,7 @@ public class MasterServlet extends HttpServlet {
 					System.out.println(name);
 				}
 			}
-	
+
 			for (int i = 0; i < this.workerList.size(); i++) {
 				String body = "files=";
 				for (int j = 0; j < s3Filekeys.size(); j++) {
@@ -169,9 +171,11 @@ public class MasterServlet extends HttpServlet {
 			break;
 		}
 		case ("/updateDatabase") : {
+			FileHelper.makeDirDeleteIfExists(this.outputDir);
+
+			S3Wrapper s3 = new S3Wrapper();
 
 			// Download output files from s3
-			S3Wrapper s3 = new S3Wrapper();
 			for (String s3FileKey : s3.getFileList(this.s3OutputDirKey)) {
 				String s3Filename = s3FileKey.replace(this.s3OutputDirKey, "");
 				if (!s3Filename.isEmpty()) {
@@ -181,6 +185,7 @@ public class MasterServlet extends HttpServlet {
 				}
 			}
 
+			FileHelper.makeDirDeleteIfExists(this.localDatabase);
 			// Read the output files and update the database
 			BDBWrapper bdb = new BDBWrapper(this.localDatabase.getAbsolutePath());
 			for (File file : this.outputDir.listFiles()) {
@@ -194,6 +199,7 @@ public class MasterServlet extends HttpServlet {
 							String page = parsed2[0];
 							String rank = parsed2[1];
 							bdb.putKeyValue("docID:pagerank", page, rank);
+							System.out.println("PUT: " + page + " : " + rank);
 						}
 					}
 					reader.close();
@@ -256,7 +262,10 @@ public class MasterServlet extends HttpServlet {
 				JSONArray rankList = new JSONArray();
 				BDBWrapper bdb = new BDBWrapper(this.localDatabase.getAbsolutePath());
 				for (String encodeddocID : docIDs.split(",")) {
-					String docID = encodeddocID;
+					if (encodeddocID == null || encodeddocID.isEmpty()) {
+						continue;
+					}
+					String docID = URLEncoder.encode(encodeddocID, "UTF-8");
 					String rank = bdb.getKeyValue("docID:pagerank", docID);
 					JSONObject pageRankObj = new JSONObject();
 					pageRankObj.put("docID", docID);
