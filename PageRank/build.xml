@@ -1,0 +1,105 @@
+<project name="PageRank" default="all" basedir="./">
+	<property name="shared.root" location="${basedir}"/>
+	<property name="file.separator" location="/"/>
+	<property name="inputlib.dir"  location="${shared.root}${file.separator}lib"/>
+	<property name="project.root" location="${basedir}"/>
+	<property name="build.dir" location="${project.root}"/>
+	<property name="build.target.dir" location="${project.root}${file.separator}target"/>
+	<property name="wtf" location="${build.target.dir}${file.separator}worker"/>
+	<property name="web.2" location="${wtf}${file.separator}WEB-INF"/>
+	<property name="wtf.2" location="${web.2}${file.separator}lib"/>
+	<property name="why" location="${build.target.dir}${file.separator}master"/>
+	<property name="web.1" location="${why}${file.separator}WEB-INF"/>
+	<property name="why.2" location="${web.1}${file.separator}lib"/>
+
+
+	
+  <target name="init">
+    <mkdir dir="target/master/WEB-INF/classes"/>
+    <mkdir dir="target/worker/WEB-INF/classes"/>
+    <mkdir dir="classes"/>
+  	<mkdir dir="target/worker/WEB-INF/lib"/>
+  </target>
+  
+  <target name="compile-jobs" depends="init">
+    <javac srcdir="src" destdir="classes" includes="**/job/*.java,**/Job.java,**/Context.java,**/BlockingQueue.java,**/DirectoryHelpers.java,**/MapContext.java,**/ReduceContext.java,**/ReduceIntermed.java, **/PostingList.java" deprecation="on"
+     debug="true" includeantruntime="false" classpath="classes">
+    	<classpath>
+    	   <fileset dir="lib">
+    	   <include name="*.jar"/>
+    	   </fileset>
+    	</classpath>
+       <compilerarg value="-Xlint"/>
+    </javac>
+  </target>
+	
+  <target name="compile-master" depends="init, compile-jobs">
+    <javac srcdir="src" destdir="target/master/WEB-INF/classes" includes="**/master/*.java" deprecation="on"
+     debug="true" includeantruntime="false" classpath="lib">
+    	<classpath>
+    	    	   <fileset dir="lib">
+    	    	   <include name="*.jar"/>
+    	    	   </fileset>
+    	    	</classpath>
+    	<compilerarg value="-Xlint"/>
+    </javac>
+  </target>
+  
+  <target name="compile-worker" depends="init, compile-jobs">
+    <javac srcdir="src" destdir="target/worker/WEB-INF/classes" includes="**/worker/*.java, **/job/*.java, **/Job.java, **/Context.java,**/MapRun.java,**/ReduceRun.java,**/BlockingQueue.java,**/DirectoryHelpers.java,**/MapContext.java,**/ReduceContext.java,**/ReduceIntermed.java, **/PostingList.java" deprecation="on"
+     debug="true" includeantruntime="false" classpath="lib">
+    	<classpath>
+    	    	   <fileset dir="lib">
+    	    	   <include name="*.jar"/>
+    	    	   </fileset>
+    	    	</classpath>
+    	<compilerarg value="-Xlint"/>
+    </javac>
+  </target>
+
+  <target name="all" depends="war-master,war-worker,compile-jobs"/>
+  
+  <target name="war-master" depends="compile-master">
+  	<delete file ="master.war"/>
+  	<copy todir="${why.2}" overwrite="true">
+		<fileset dir="${inputlib.dir}">
+			<include name="*.jar"/>
+		</fileset>
+  	</copy>
+    <jar destfile="master.war">
+      <fileset dir="target/master/" includes="WEB-INF/classes/**/*.class"/>
+      <fileset dir="target/master/" includes="WEB-INF/lib/**/*.jar"/>
+      <fileset dir="target/master/" includes="WEB-INF/*.xml"/>
+    </jar>
+  </target>
+
+  <target name="war-worker" depends="compile-worker, compile-jobs">
+  	<delete file ="worker.war"/>
+  	<copy todir="${wtf.2}" overwrite="true">
+  		<fileset dir="${inputlib.dir}">
+  			<include name="*.jar"/>
+  		</fileset>
+  	</copy>
+  	<jar destfile="worker.war">
+      <fileset dir="target/worker/" includes="WEB-INF/classes/**/*.class"/>
+      <fileset dir="target/worker/" includes="WEB-INF/lib/**/*.jar"/>
+      <fileset dir="target/worker/" includes="WEB-INF/*.xml"/>
+    </jar>
+  </target>
+  
+  <target name="pack" description="Create an archive for submission">
+    <zip destfile="submit-hw3.zip">
+      <zipfileset dir="." excludes="target/**,**/*.class,submit-hw3.zip,master.war,worker*.war"/>
+    </zip>
+  </target>
+  
+  <target name="clean">
+    <delete dir="target/master/WEB-INF/classes"/>
+    <delete dir="target/worker/WEB-INF/classes"/>
+  	<delete dir="target/master/WEB-INF/lib"/>
+    <delete dir="target/worker/WEB-INF/lib"/>
+    <delete dir="classes"/>
+    <delete file="master.war"/>
+    <delete file="worker.war"/>
+  </target>
+</project>
