@@ -219,86 +219,85 @@ public class PageRank {
 				}
 			}
 		}
-	}
 
-	// Download the spool in files from S3
-	String s3FileDirKey = this.s3SpoolOutDirKey + this.workerList.get(this.workerID) + "/";
-	for (String s3FileKey : s3.getFileList(s3FileDirKey)) {
-		String s3Filename = this.s3FileKey.replace(this.s3FileDirKey, "");
-		if (!s3Filename.isEmpty()) {
-			File localFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
-			File localFile = new File(localFileDir, this.s3FileKey);
-			FileHelper.makeFile(localFile);
-			s3.download(this.s3FileKey, localFile);
+		// Download the spool in files from S3
+		String s3FileDirKey = this.s3SpoolOutDirKey + this.workerList.get(this.workerID) + "/";
+		for (String s3FileKey : s3.getFileList(s3FileDirKey)) {
+			String s3Filename = s3FileKey.replace(s3FileDirKey, "");
+			if (!s3Filename.isEmpty()) {
+				File localFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
+				File localFile = new File(localFileDir, s3FileKey);
+				FileHelper.makeFile(localFile);
+				s3.download(s3FileKey, localFile);
+			}
 		}
 	}
-}
 
-// Reduce
-public void runReduce() {
-	FileHelper.makeFile(this.outputFile);
-	File spoolOutFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
+	// Reduce
+	public void runReduce() {
+		FileHelper.makeFile(this.outputFile);
+		File spoolOutFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
 
-	// Collect the values on each line and produce a values list for the reduce job
-	if (spoolOutFileDir != null && spoolOutFileDir.isDirectory()) {
-		Map<String, List<String>> reduceMap = new HashMap<String, List<String>>();
-		for (File spoolFile : spoolOutFileDir.listFiles()) {
-			if (spoolFile.isFile()) {
-				try {
-					BufferedReader reader = new BufferedReader(new FileReader(spoolFile));
-					String line = "";
-					while ((line = reader.readLine()) != null) {
-						if (!line.isEmpty() && line.contains("\t")) {
-							String[] parsed = line.split("\t", 2);
-							String key = parsed[0];
-							String value = parsed[1];
-							if (!reduceMap.containsKey(key)) {
-								reduceMap.put(key, new ArrayList<String>());
+		// Collect the values on each line and produce a values list for the reduce job
+		if (spoolOutFileDir != null && spoolOutFileDir.isDirectory()) {
+			Map<String, List<String>> reduceMap = new HashMap<String, List<String>>();
+			for (File spoolFile : spoolOutFileDir.listFiles()) {
+				if (spoolFile.isFile()) {
+					try {
+						BufferedReader reader = new BufferedReader(new FileReader(spoolFile));
+						String line = "";
+						while ((line = reader.readLine()) != null) {
+							if (!line.isEmpty() && line.contains("\t")) {
+								String[] parsed = line.split("\t", 2);
+								String key = parsed[0];
+								String value = parsed[1];
+								if (!reduceMap.containsKey(key)) {
+									reduceMap.put(key, new ArrayList<String>());
+								}
+								List<String> values = reduceMap.get(key);
+								values.add(value);
+								reduceMap.put(key, values);
 							}
-							List<String> values = reduceMap.get(key);
-							values.add(value);
-							reduceMap.put(key, values);
 						}
+						reader.close();
+
+					} catch (FileNotFoundException e) {
+					} catch (IOException e) {
 					}
-					reader.close();
-
-				} catch (FileNotFoundException e) {
-				} catch (IOException e) {
 				}
 			}
-		}
 
-		// Run reduce on each entry in the map
-		for (String key : reduceMap.keySet()) {
-			this.prj.reduce(key, reduceMap.get(key).toArray(new String[reduceMap.size()]), this.prrc);
-		}
-
-		// Upload each of the output files of the workers onto s3
-		S3Wrapper s3 = new S3Wrapper();
-		for (File file : this.outputDir.listFiles()) {
-			if (file.isFile()) {
-				String uploadKey = this.s3OutputDirKey + "worker-" + this.workerID;
-				s3.upload(uploadKey, file);
+			// Run reduce on each entry in the map
+			for (String key : reduceMap.keySet()) {
+				this.prj.reduce(key, reduceMap.get(key).toArray(new String[reduceMap.size()]), this.prrc);
 			}
-		}
 
-		// Copy output file to input directory for next iteration
-		FileHelper.makeDirDeleteIfExists(this.inputDir);
-		FileHelper.touchDeleteIfExists(this.inputFile);
-		try {
-			BufferedReader reader = new BufferedReader(new FileReader(this.outputFile));
-			PrintWriter writer = new PrintWriter(new FileWriter(this.inputFile));
-			String line = "";
-			while ((line = reader.readLine()) != null) {
-				if (!line.isEmpty()) {
-					writer.println(line);
+			// Upload each of the output files of the workers onto s3
+			S3Wrapper s3 = new S3Wrapper();
+			for (File file : this.outputDir.listFiles()) {
+				if (file.isFile()) {
+					String uploadKey = this.s3OutputDirKey + "worker-" + this.workerID;
+					s3.upload(uploadKey, file);
 				}
 			}
-			reader.close();
-			writer.close();
-		} catch (FileNotFoundException e) {
-		} catch (IOException e) {
+
+			// Copy output file to input directory for next iteration
+			FileHelper.makeDirDeleteIfExists(this.inputDir);
+			FileHelper.touchDeleteIfExists(this.inputFile);
+			try {
+				BufferedReader reader = new BufferedReader(new FileReader(this.outputFile));
+				PrintWriter writer = new PrintWriter(new FileWriter(this.inputFile));
+				String line = "";
+				while ((line = reader.readLine()) != null) {
+					if (!line.isEmpty()) {
+						writer.println(line);
+					}
+				}
+				reader.close();
+				writer.close();
+			} catch (FileNotFoundException e) {
+			} catch (IOException e) {
+			}
 		}
 	}
-}
 }
