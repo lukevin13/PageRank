@@ -44,8 +44,7 @@ public class PageRank {
 
 	// S3 folder keys
 	private String s3CorpusDirKey = "test_docs/";
-	private String s3SpoolInDirKey = "pagerank/storage/spoolIn/";
-	private String s3SpoolOutDirKey = "pagerank/storage/spoolOut/";
+	private String s3SpoolTempDirKey = "pagerank/storage/spoolTemp/";
 	private String s3OutputDirKey = "pagerank/storage/output/";
 
 	// Constructor
@@ -213,7 +212,7 @@ public class PageRank {
 				for (File localFile : localFileDir.listFiles()) {
 
 					if (localFile != null && localFile.isFile()) {
-						String s3Filekey = this.s3SpoolInDirKey + localFileDir.getName() + localFile.getName();
+						String s3Filekey = this.s3SpoolTempDirKey + localFileDir.getName() + "/" + localFile.getName();
 						s3.upload(s3Filekey, localFile);
 					}
 				}
@@ -221,12 +220,12 @@ public class PageRank {
 		}
 
 		// Download the spool in files from S3
-		String s3FileDirKey = this.s3SpoolOutDirKey + this.workerList.get(this.workerID) + "/";
+		String s3FileDirKey = this.s3SpoolTempDirKey + this.workerList.get(this.workerID) + "/";
 		for (String s3FileKey : s3.getFileList(s3FileDirKey)) {
 			String s3Filename = s3FileKey.replace(s3FileDirKey, "");
 			if (!s3Filename.isEmpty()) {
 				File localFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
-				File localFile = new File(localFileDir, s3FileKey);
+				File localFile = new File(localFileDir, s3Filename);
 				FileHelper.makeFile(localFile);
 				s3.download(s3FileKey, localFile);
 			}
