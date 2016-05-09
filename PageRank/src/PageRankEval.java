@@ -32,7 +32,7 @@ public class PageRankEval {
 				while (!shared) {
 					flag = true;
 
-					socket = new Socket(lp, port);
+					socket = new Socket(ip, port);
 					if (socket.isClosed()) {
 						Thread.sleep(5000);
 						continue;
@@ -64,6 +64,9 @@ public class PageRankEval {
 						Thread.sleep(5000);
 						continue;
 					}
+					System.out.println("Time for " + run + " iterations" + (System.currentTimeMillis() - startTime));
+
+
 
 					switch (status) {
 					case ("Ready to Map") : {
@@ -85,6 +88,8 @@ public class PageRankEval {
 						status = "Ready to Map";
 						System.out.println("Done reduce");
 						shared = true;
+						System.out.println("Time for " + run + " iterations" + (System.currentTimeMillis() - startTime));
+
 						break;
 					}
 					}
@@ -100,7 +105,7 @@ public class PageRankEval {
 
 	public static void sendGet(String path) {
 		try {
-			Socket socket = new Socket(lp, port);
+			Socket socket = new Socket(ip, port);
 			PrintWriter writer = new PrintWriter(socket.getOutputStream());
 			writer.println("GET " + path + " HTTP/1.1");
 			writer.println("Host: localhost:8084");
