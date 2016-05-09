@@ -84,9 +84,9 @@ public class PageRank {
 		if (s3Files == null || s3Files.isEmpty()) {
 			return 0;
 		}
-		
+
 		int numDocs = 0;
-		
+
 		// Create the directories, delete if they exists already
 		FileHelper.makeDirDeleteIfExists(this.corpusZipped);
 		FileHelper.makeDirDeleteIfExists(this.corpusUnzipped);
@@ -106,11 +106,11 @@ public class PageRank {
 		for (String s3filekey : zippedFiles) {
 			String s3filename = s3filekey.replace(this.s3CorpusDirKey, "");
 			if (s3filename != null && !s3filename.isEmpty()) {
-				//				if (filelist.contains(s3filename)) {
-				File localfile = new File(this.corpusZipped, s3filename);
-				FileHelper.touchDeleteIfExists(localfile);
-				s3.download(s3filekey, localfile);
-				//				}
+				if (filelist.contains(s3filename)) {
+					File localfile = new File(this.corpusZipped, s3filename);
+					FileHelper.touchDeleteIfExists(localfile);
+					s3.download(s3filekey, localfile);
+				}
 			}
 		}
 
@@ -245,7 +245,7 @@ public class PageRank {
 	// Reduce
 	public void runReduce(int totalDocs) {
 		prj = new PageRankJob(totalDocs);
-		
+
 		FileHelper.makeFile(this.outputFile);
 		File spoolOutFileDir = new File(this.spoolOut, this.workerList.get(this.workerID));
 

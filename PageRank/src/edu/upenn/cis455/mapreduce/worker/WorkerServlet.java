@@ -135,6 +135,7 @@ public class WorkerServlet extends HttpServlet {
 			break;
 		}
 		}
+		
 		this.wut.update();
 	}
 

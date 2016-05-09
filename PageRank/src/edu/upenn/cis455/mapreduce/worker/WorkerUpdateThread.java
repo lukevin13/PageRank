@@ -21,13 +21,17 @@ public class WorkerUpdateThread implements Runnable {
 	// Update method
 	public void update() {
 		try {
+			String cur = this.worker.status;
 			Socket s = new Socket(this.worker.masterIP, this.worker.masterPort);
 			String body = "workerID=" + this.worker.workerID + "&"
 					+ "workerPort=" + this.worker.workerPort + "&"
-					+ "status=" + this.worker.status + "&"
+					+ "status=" + cur + "&"
 					+ "numDocs=" + this.worker.numDocs;
 			sendPost(s, "/workerupdate", body);
 			s.close();
+			if (cur.equals("Reduce Complete")) {
+				this.worker.status = "Ready to Map";
+			}
 		} catch (UnknownHostException e) {
 		} catch (IOException e) {
 		}

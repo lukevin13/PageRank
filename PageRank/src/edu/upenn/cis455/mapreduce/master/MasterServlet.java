@@ -28,6 +28,7 @@ public class MasterServlet extends HttpServlet {
 	String rootDir;
 	private List<WorkerStatus> workerList = new ArrayList<WorkerStatus>();
 	private int numDocs;
+	private int maxDocs = 2;
 
 	// Database and S3
 	private String s3CorpusDirKey = "test_docs/";
@@ -75,18 +76,15 @@ public class MasterServlet extends HttpServlet {
 			break;
 		}
 		case ("/relay") : {
+			res.setContentType("text/plain");
 			try {
 				PrintWriter writer = res.getWriter();
-				writer.println("<-->\r\n");
+				writer.println("<-->");
 				for (WorkerStatus ws : this.workerList) {
 					writer.println(ws.getStatus());
 				}
 				writer.flush();
 				writer.close();
-			} catch (IOException e) {
-			}
-			try {
-				res.sendRedirect("/status");
 			} catch (IOException e) {
 			}
 			break;
@@ -120,6 +118,9 @@ public class MasterServlet extends HttpServlet {
 				if (name != null && !name.isEmpty()) {
 					s3Filekeys.add(name);
 					System.out.println(name);
+				}
+				if (s3Filekeys.size() >= maxDocs) {
+					break;
 				}
 			}
 
