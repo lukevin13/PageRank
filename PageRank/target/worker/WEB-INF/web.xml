@@ -8,11 +8,11 @@
          <servlet-class>edu.upenn.cis455.mapreduce.worker.WorkerServlet</servlet-class>
          <init-param>
            <param-name>storagedir</param-name>
-           <param-value>pagerank/storage/worker0</param-value>
+           <param-value>pagerank/storage/worker</param-value>
          </init-param>
          <init-param>
            <param-name>master</param-name>
-           <param-value>localhost:8084</param-value>
+           <param-value>52.202.180.149:8084</param-value>
          </init-param>
      </servlet>
 
